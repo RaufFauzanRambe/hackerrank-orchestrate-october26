@@ -1,0 +1,39 @@
+No,Type,Item,Key_Points
+1,Question Bank,Walk me through your overall architecture.,Pipeline stages: ingest all inputs -> resolve identity and aliases -> scan every location -> rebuild the event timeline -> issue verdict -> generate remediation or proof checks -> evaluation loop.
+2,Question Bank,Why use an LLM instead of regex or keyword matching?,"PII appears in free text, images, and varied formats; deletion rules are heterogeneous; the LLM handles context and nuance while structured outputs keep results parseable and reliable."
+3,Question Bank,How do you parse deletion_rules.csv?,Rules are loaded into a structured map of data type and location to required treatment; the retention whitelist of permitted identifiers is extracted and enforced programmatically.
+4,Question Bank,How do you find historical identifiers?,"Mine profile-change events, logs, and support records for aliases; build the union of all identifiers per person; then search each identifier across every storage location."
+5,Question Bank,How do you detect processes that can recreate data?,"Scan job, configuration, and log tables for sync, import, and restore pipelines referencing user identifiers; anything still active is flagged as a recreation risk."
+6,Question Bank,How do you order remediation steps?,"Kill recreation sources first (disable sync, import, restore), then apply the required treatment to every copy, then verify that retained records remain available."
+7,Question Bank,What makes a deletion COMPLETE in your system?,"All four criteria encoded and satisfied: every copy treated per deletion_rules.csv, no active recreation path, retained records hold only permitted identifiers, retained records remain available."
+8,Question Bank,How do you handle NOT_APPLICABLE?,Verify that no deletion request exists for the person before concluding; never guess COMPLETE or INCOMPLETE when there is no request to act on.
+9,Question Bank,How do you prove a COMPLETE deletion?,"Positive verification per location: list the location, the method used, and the clean result — evidence, not claims."
+10,Question Bank,How did you read the local media files?,A VLM pipeline extracts visible PII from images such as attachment screenshots and feeds it into the same identifier index used for CSV records.
+11,Question Bank,What is your evaluation workflow?,"Split requests with expected output, compute per-status accuracy, inspect disagreements, iterate prompts; requests without references get self-consistency and rule-based sanity checks."
+12,Question Bank,How did you avoid hardcoded answers?,No request-ID to answer maps anywhere; every verdict is derived from record content plus rules by the model; all code paths are generic across requests.
+13,Question Bank,How do you guarantee the exact output.csv schema?,"A serializer validates header names, column order, and value formats against problem_statement.md before writing; an integration test checks a sample row."
+14,Question Bank,Which model did you choose and why?,"A reasoning-capable LLM run at low temperature with structured output bindings, chosen for evidence-grounded multi-step inference over tabular and textual records."
+15,Question Bank,What was the hardest technical problem?,"Alias resolution across historical identifiers — solved by event mining plus LLM-assisted entity matching, validated against the requests with expected output."
+16,Question Bank,"How does your agent handle rule conflicts, like delete versus retain?","Retention wins for policy-protected records, restricted to permitted identifiers; copies outside the retention scope receive the deletion treatment."
+17,Question Bank,What would break at 10x the data volume?,"Mitigations: index-first scanning, batching, caching model calls; the verdict logic itself is unchanged because it is data-driven."
+18,Question Bank,How did you use AI while building this solution?,"Pair-programming, prompt iteration, and evaluation harness generation; every design decision was reviewed and is understood by me personally."
+19,Question Bank,What are the weaknesses of your approach?,"LLM hallucination risk — mitigated with evidence grounding, schema validation, and cross-checking against the requests that include expected output."
+20,Question Bank,"If given one more week, what would you add?","A model comparison suite, ensemble verdicts for low-confidence cases, and richer synthetic test cases for the evaluation workflow."
+21,Question Bank,How do you treat requests without expected output?,Identical pipeline with no special casing; evaluation falls back to self-consistency checks and rule-based sanity assertions.
+22,Question Bank,What is the difference between a sync job and a backup?,"A sync job is an active process that can recreate data continuously; a backup is a static copy — both are exposure, but their remediation differs."
+23,Compliance Checklist,All CSV inputs are parsed,"deletion_requests.csv, deletion_rules.csv, and every system table in the data corpus are read at runtime — nothing is assumed."
+24,Compliance Checklist,All local media files are processed,A VLM path covers image files; no artifact in the provided corpus is skipped.
+25,Compliance Checklist,output.csv matches the exact schema,"Headers, column order, and value formats mirror problem_statement.md character-perfect."
+26,Compliance Checklist,Evaluation workflow is included,A script compares predictions against expected outputs and reports per-status accuracy for iteration.
+27,Compliance Checklist,No hardcoded test labels,No request-specific answers exist in code; verdicts come from data and rules only.
+28,Compliance Checklist,Every request is answered,"One output row per deletion request, including the rows that ship without expected output."
+29,Compliance Checklist,Retention rules are respected,Retained records keep only permitted identifiers and remain available after remediation.
+30,Compliance Checklist,Transcript saved at the required path,log.txt is generated where the 'Chat transcript logging' section specifies and left unedited.
+31,Hidden Case Strategy,Person never requested deletion,No matching request record exists -> answer NOT_APPLICABLE; first verify the person's identifiers truly appear nowhere in the request set.
+32,Hidden Case Strategy,Deletion requested and nothing found anywhere,"Expect COMPLETE; still emit full proof checks listing every location scanned, the method, and its clean result."
+33,Hidden Case Strategy,"Some copies treated, others raw","Answer INCOMPLETE; remediation enumerates each untreated copy with its rule-required treatment (remove, redact, or anonymize)."
+34,Hidden Case Strategy,Active sync job references the user,"Answer INCOMPLETE; step one disables the job, subsequent steps re-delete the data, final step verifies nothing is recreated."
+35,Hidden Case Strategy,Retained record contains a non-permitted identifier,"Answer INCOMPLETE; redact the record down to the permitted set (e.g., internal ID only) while keeping it available."
+36,Hidden Case Strategy,Backup still holds the full profile,Answer INCOMPLETE; purge or expire the backup per the rules and confirm no restore path can resurrect the data.
+37,Hidden Case Strategy,Historical identifier lingers in a search index,"Answer INCOMPLETE; purge the index entry, trigger re-indexing, and verify the identifier returns no results."
+38,Hidden Case Strategy,Old log lines still embed PII,Follow deletion_rules.csv: redact if the rule permits keeping only internal IDs; remove lines entirely if the log's retention window allows.
